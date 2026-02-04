@@ -1,0 +1,18 @@
+# API Keys and Secrets
+.env
+viz.ipynb
+
+# Python Virtual Environments
+.conda/
+env/
+venv/
+__pycache__/
+*.pyc
+
+# Local Databases and Data
+data/university.db
+*.sqlite3
+
+# OS specific files
+.DS_Store
+Thumbs.db
