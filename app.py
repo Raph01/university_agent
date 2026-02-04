@@ -49,7 +49,7 @@ demo = gr.ChatInterface(
     description="Ask me about students, teachers, and courses",
     textbox=gr.Textbox(placeholder="Ask me a question...", container=True, scale=7, autofocus=True),
     examples=[
-        "Who teaches Maths 101 at MIT?", 
+        "Who are the MIT teachers?", 
         "How many students are enrolled in each university?",
         "Who are the students enrolled in more than one class?"
     ])

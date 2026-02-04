@@ -2,10 +2,21 @@ import sqlite3
 import os
 import random
 
-def setup_database():
+# --- CONFIGURATION ---
+CONFIG = {
+    "universities": [(1, 'MIT'), (2, 'Stanford')],# (3, 'Harvard')],
+    "teachers_per_uni": 4,
+    "students_per_uni": 25,
+    "courses_per_uni": 3,
+    "db_path": 'data/university.db'
+}
+
+def setup_database(config):
+    # Ensure the directory exists
     os.makedirs('data', exist_ok=True)
-    db_path = 'data/university.db'
+    db_path = config["db_path"]
     
+    # Reset database if it exists
     if os.path.exists(db_path):
         os.remove(db_path)
         
@@ -56,98 +67,72 @@ def setup_database():
         );
     ''')
 
-    # 2. Insert Sample Data
+    # 2. Expanded Data Pools
+    classes_list = ["AI", "Physics", "Maths", "Computer Science", "Biology", "History", "Ethics", "Astronomy"]
+    first_names = [
+    "James", "Mary", "Robert", "Patricia", "John", "Jennifer", "Michael", "Linda", "William", "Elizabeth",
+    "David", "Barbara", "Richard", "Susan", "Joseph", "Jessica", "Thomas", "Sarah", "Christopher", "Karen",
+    "Charles", "Lisa", "Daniel", "Nancy", "Matthew", "Sandra", "Anthony", "Betty", "Mark", "Ashley",
+    "Donald", "Emily", "Steven", "Kimberly", "Andrew", "Donna", "Paul", "Emily", "Joshua", "Carol",
+    "Kenneth", "Michelle", "Kevin", "Amanda", "Brian", "Dorothy", "George", "Melissa", "Timothy", "Deborah"
+]
 
-    # 2.1. Two Universities
-    cursor.executemany("INSERT INTO universities VALUES (?, ?)", [(1, 'MIT'), (2, 'Stanford')])
+    last_names = [
+    "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez",
+    "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas", "Taylor", "Moore", "Jackson", "Martin",
+    "Lee", "Perez", "Thompson", "White", "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson",
+    "Walker", "Young", "Allen", "King", "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores",
+    "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell", "Carter", "Roberts"
+]
 
-    # 2.2 Teachers per Univ
-    teachers = [
-        # MIT (Univ 1)
-        (1, 1, 'Albert', 'Einstein', 'Physics'),
-        (2, 1, 'Marie', 'Curie', 'Chemistry'),
-        (3, 1, 'Isaac', 'Newton', 'Maths'),
-        (4, 1, 'Hypatia', 'of Alexandria', 'Astronomy'),
-        
-        # Stanford (Univ 2)
-        (5, 2, 'Alan', 'Turing', 'Computer Science'),
-        (6, 2, 'Ada', 'Lovelace', 'AI'),
-        (7, 2, 'Charles', 'Darwin', 'Biology'),
-        (8, 2, 'Nikola', 'Tesla', 'Electrical Engineering')
-    ]
-    cursor.executemany("INSERT INTO teachers VALUES (?, ?, ?, ?, ?)", teachers)
+    # 3. Data Generation Logic
+    cursor.executemany("INSERT INTO universities VALUES (?, ?)", config["universities"])
 
-    # 2.3. Courses (Note: Course 103 and 203 are both "Maths 101")
-    cursor.executemany("INSERT INTO courses VALUES (?, ?, ?)", [
-        (101, 1, 'Physics 101'), (102, 1, 'Organic Chemistry'), (103, 1, 'Maths 101'), # MIT
-        (201, 2, 'Intro to AI'), (202, 2, 'Data Structures'), (203, 2, 'Maths 101')    # Stanford
-    ])
+    # FIXED: Correctly unpacking (ID, Name)
+    for u_id, u_name in config["universities"]:
+        # 3.1 Teachers
+        u_teacher_ids = []
+        for _ in range(config["teachers_per_uni"]):
+            cursor.execute(
+                "INSERT INTO teachers (univ_id, first_name, last_name, department) VALUES (?, ?, ?, ?)",
+                (u_id, random.choice(first_names), random.choice(last_names), random.choice(classes_list))
+            )
+            u_teacher_ids.append(cursor.lastrowid)
 
-    # 2.4 Multi-Teacher Assignment (MIT Physics 101 co-taught by Einstein AND Curie)
-    cursor.execute("INSERT INTO course_assignments VALUES (101, 1)")
-    cursor.execute("INSERT INTO course_assignments VALUES (101, 2)")
-    cursor.execute("INSERT INTO course_assignments VALUES (102, 2)") # Curie also teaches Chemistry
-    cursor.execute("INSERT INTO course_assignments VALUES (103, 3)") # Newton - Calculus
-    cursor.execute("INSERT INTO course_assignments VALUES (201, 6)") # Lovelace - AI
-    cursor.execute("INSERT INTO course_assignments VALUES (202, 5)") # Turing - Data Structures
-    cursor.execute("INSERT INTO course_assignments VALUES (203, 7)") # Darwin - Bio
-
-    # 2.5 Students
-    random.seed(42) # For reproducibility
-
-    first_names = ["James", "Mary", "Robert", "Patricia", "John", "Jennifer", "Michael", "Linda", 
-                   "William", "Elizabeth", "David", "Barbara", "Richard", "Susan", "Joseph", "Jessica",
-                   "Thomas", "Sarah", "Charles", "Karen", "Christopher", "Nancy", "Daniel", "Lisa",
-                   "Matthew", "Betty", "Anthony", "Margaret", "Mark", "Sandra", "Donald", "Ashley",
-                   "Steven", "Dorothy", "Paul", "Kimberly", "Andrew", "Emily", "Joshua", "Donna"]
-    last_names = ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", 
-                  "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas"]
-
-    all_students = []
-    
-    # MIT Students (IDs 1-30). If updating this, need to update Enroll MIT Students and Standford students below (around line 140)
-    for i in range(1, 31):
-        f = random.choice(first_names)
-        l = random.choice(last_names)
-        all_students.append((i, 1, f, l))
-        
-    # Stanford Students (IDs 31-60)
-    for i in range(31, 61):
-        f = random.choice(first_names)
-        l = random.choice(last_names)
-        all_students.append((i, 2, f, l))
-    
-    cursor.executemany("INSERT INTO students VALUES (?, ?, ?, ?)", all_students)
-
-
-
-    # 2.6 Sample Enrollment
-    all_enrollments = []
-    mit_courses = [101, 102, 103]
-    stan_courses = [201, 202, 203]
-
-    def enroll_students(student_range, course_list):
-        for s_id in student_range:
-            # Randomly decide if a student takes 1, 2, or 3 courses
-            num_courses = random.choices([1, 2, 3], weights=[0.6, 0.3, 0.1])[0]
-            assigned_courses = random.sample(course_list, k=num_courses)
+        # 3.2 Courses
+        u_course_ids = []
+        for i in range(config["courses_per_uni"]):
+            cursor.execute(
+                "INSERT INTO courses (univ_id, name) VALUES (?, ?)",
+                (u_id, f"{random.choice(classes_list)} {101 + i}")
+            )
+            c_id = cursor.lastrowid
+            u_course_ids.append(c_id)
             
-            for c_id in assigned_courses:
-                # Assign a unique grade for diversification
-                grade = random.randint(65, 98)
-                all_enrollments.append((s_id, c_id, grade))
+            # 3.3 Assignments
+            num_t = min(len(u_teacher_ids), random.randint(1, 2))
+            for t_id in random.sample(u_teacher_ids, k=num_t):
+                cursor.execute("INSERT INTO course_assignments VALUES (?, ?)", (c_id, t_id))
 
-    # Enroll MIT Students
-    enroll_students(range(1, 31), mit_courses)
+        # 3.4 Students
+        for _ in range(config["students_per_uni"]):
+            cursor.execute(
+                "INSERT INTO students (univ_id, first_name, last_name) VALUES (?, ?, ?)",
+                (u_id, random.choice(first_names), random.choice(last_names))
+            )
+            s_id = cursor.lastrowid
 
-    # Enroll Stanford Students
-    enroll_students(range(31, 61), stan_courses)
-
-    cursor.executemany("INSERT INTO enrollments VALUES (?, ?, ?)", all_enrollments)
+            # 3.5 Enrollments
+            num_c = min(len(u_course_ids), 3)
+            for c_id in random.sample(u_course_ids, k=num_c):
+                cursor.execute("INSERT INTO enrollments VALUES (?, ?, ?)", (s_id, c_id, random.randint(65, 98)))
 
     conn.commit()
     conn.close()
-    print("Success: Data loaded.")
+
+
+    print(f"Success: Database created at {db_path}")
+    print(f"Loaded {len(config['universities'])} universities with {config['students_per_uni']} students each.")
 
 if __name__ == "__main__":
-    setup_database()
+    setup_database(CONFIG)
