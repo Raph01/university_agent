@@ -1,4 +1,4 @@
-# University SQL Agent
+# University AI Agent
 
 An agentic AI system built with **LangGraph** that translates natural language questions into SQL, executes them against a SQLite database, and autonomously self-corrects if errors occur.
 
